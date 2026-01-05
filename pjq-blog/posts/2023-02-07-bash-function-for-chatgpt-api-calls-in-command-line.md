@@ -34,7 +34,7 @@ So I can run it in my terminal
 ```
 `Keyword: Write the strategy about Mobile Performance testing
 Temperature: 1.0
-curl https://api.openai.com/v1/completions   -H 'Content-Type: application/json'   -H "Authorization: Bearer YOUR_OPENAI_API_KEY"   -d '{
+curl https://api.openai.com/v1/completions   -H 'Content-Type: application/json'   -H "Authorization: Bearer sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"   -d '{
   "model": "text-davinci-003",
   "prompt": "Write the strategy about Mobile Performance testing",
   "max_tokens": 4000,

@@ -163,12 +163,54 @@ def sanitize_filename(title):
     return filename[:100]  # Limit length
 
 
+def parse_wordpress_xml_regex_fallback(xml_content):
+    """Parse posts using regex as fallback for items lxml can't parse"""
+    posts = []
+
+    # Find all <item>...</item> blocks
+    items = re.findall(r'<item>(.*?)</item>', xml_content, re.DOTALL)
+
+    for item_content in items:
+        # Check if it's a published post
+        if '<wp:post_type><![CDATA[post]]></wp:post_type>' not in item_content:
+            continue
+        if '<wp:status><![CDATA[publish]]></wp:status>' not in item_content:
+            continue
+
+        # Extract fields using regex
+        title_match = re.search(r'<title><!\[CDATA\[(.*?)\]\]></title>', item_content)
+        content_match = re.search(r'<content:encoded><!\[CDATA\[(.*?)\]\]></content:encoded>', item_content, re.DOTALL)
+        date_match = re.search(r'<wp:post_date><!\[CDATA\[(.*?)\]\]></wp:post_date>', item_content)
+        author_match = re.search(r'<dc:creator><!\[CDATA\[(.*?)\]\]></dc:creator>', item_content)
+
+        title = title_match.group(1) if title_match else 'Untitled'
+        content = content_match.group(1) if content_match else ''
+        date = date_match.group(1) if date_match else ''
+        author = author_match.group(1) if author_match else 'Unknown'
+
+        # Extract categories and tags
+        categories = re.findall(r'<category domain="category"[^>]*><!\[CDATA\[(.*?)\]\]></category>', item_content)
+        tags = re.findall(r'<category domain="post_tag"[^>]*><!\[CDATA\[(.*?)\]\]></category>', item_content)
+
+        posts.append({
+            'title': title,
+            'content': content,
+            'date': date,
+            'author': author,
+            'categories': categories,
+            'tags': tags,
+            'type': 'post'
+        })
+
+    return posts
+
+
 def parse_wordpress_xml(xml_file):
     """Parse WordPress XML export file"""
     try:
         # Use lxml with recovery mode if available, otherwise use standard parser
         if LXML_AVAILABLE:
-            parser = ET.XMLParser(recover=True, encoding='utf-8')
+            parser = ET.XMLParser(recover=True, encoding='utf-8', huge_tree=True)
             tree = ET.parse(xml_file, parser=parser)
         else:
             tree = ET.parse(xml_file)
@@ -182,6 +224,8 @@ def parse_wordpress_xml(xml_file):
         }
 
         posts = []
+
+        print(f"Total items found by XML parser: {len(root.findall('.//item'))}")
 
         for item in root.findall('.//item'):
             post_type = item.find('wp:post_type', namespaces)
@@ -221,6 +265,28 @@ def parse_wordpress_xml(xml_file):
                         'tags': tags,
                         'type': post_type.text
                     })
+
+        # Use regex fallback to find missing posts
+        print(f"Found {len(posts)} posts with XML parser")
+        print("Checking for missing posts with regex fallback...")
+
+        with open(xml_file, 'r', encoding='utf-8') as f:
+            xml_content = f.read()
+
+        regex_posts = parse_wordpress_xml_regex_fallback(xml_content)
+        print(f"Found {len(regex_posts)} posts with regex parser")
+
+        # Find posts in regex but not in XML parser (by title)
+        xml_titles = {p['title'] for p in posts}
+        missing_posts = [p for p in regex_posts if p['title'] not in xml_titles]
+
+        if missing_posts:
+            print(f"\nFound {len(missing_posts)} additional posts missed by XML parser:")
+            for p in missing_posts:
+                print(f"  - {p['title']} ({p['date'][:10]})")
+            posts.extend(missing_posts)
+        else:
+            print("No additional posts found.")
 
         return posts
 
