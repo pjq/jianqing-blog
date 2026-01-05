@@ -1,0 +1,28 @@
+# WordPress exports
+*.xml
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# System files
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Logs
+*.log
+sync.log
+
+# Environment
+.env
+.venv
+venv/
+
+# Temporary files
+*.tmp
+*.bak
