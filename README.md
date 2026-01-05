@@ -2,6 +2,10 @@
 
 A simple, automated solution to backup and sync your WordPress blogs to GitHub Pages as Markdown files.
 
+## 🌐 Live Site
+
+**View the archive:** [https://github.pjq.me/jianqing-blog/](https://github.pjq.me/jianqing-blog/)
+
 ## Features
 
 - Converts WordPress XML exports to Markdown format
