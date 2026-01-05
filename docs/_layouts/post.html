@@ -1,0 +1,26 @@
+---
+layout: default
+---
+<article class="post">
+    <h1>{{ page.title }}</h1>
+
+    <div class="post-meta">
+        <time datetime="{{ page.date | date_to_xmlschema }}">{{ page.date | date: "%B %d, %Y" }}</time>
+        {% if page.author %}
+        <span> • By {{ page.author }}</span>
+        {% endif %}
+        {% if page.categories %}
+        <span> • Categories: {{ page.categories | join: ", " }}</span>
+        {% endif %}
+    </div>
+
+    <div class="content">
+        {{ content }}
+    </div>
+
+    {% if page.tags %}
+    <div class="tags" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+        <strong>Tags:</strong> {{ page.tags | join: ", " }}
+    </div>
+    {% endif %}
+</article>

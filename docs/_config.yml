@@ -1,0 +1,29 @@
+title: Jianqing's Blog Archive
+description: WordPress backup from pjq.me (2007-2025)
+url: https://github.pjq.me
+baseurl: /jianqing-blog
+
+# Markdown settings
+markdown: kramdown
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
+# Collections
+collections:
+  posts:
+    output: true
+    permalink: /posts/:title/
+
+# Theme (using default GitHub Pages theme)
+theme: minima
+
+# Plugins
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+
+# Exclude from processing
+exclude:
+  - README.md
+  - blog-index.md
