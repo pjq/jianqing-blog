@@ -15,7 +15,7 @@ A simple, automated solution to backup and sync your WordPress blogs to GitHub P
 - Organizes posts by date and pages separately
 - Generates an index/archive page automatically
 - Automated sync script with Git integration
-- Simple Markdown files (no static site generator required)
+- **Jekyll-ready for GitHub Pages** with automatic Markdown rendering
 
 ## Quick Start
 
@@ -63,12 +63,132 @@ blog/
 
 The script automatically downloads all images from your WordPress posts and updates the Markdown files to reference the local copies.
 
-### Step 3: Set Up GitHub Repository
+### Step 3: Set Up Jekyll for GitHub Pages
+
+For proper Markdown rendering on GitHub Pages, you need to set up Jekyll:
 
 ```bash
-cd blog
+# Create docs directory for GitHub Pages
+mkdir -p docs
 
-# Initialize Git repository
+# Copy converted content to docs
+cp -r blog/posts docs/_posts
+cp -r blog/images docs/images
+
+# Create Jekyll configuration
+cat > docs/_config.yml <<EOF
+title: Your Blog Archive
+description: WordPress backup from yourblog.com (2007-2025)
+url: https://yourusername.github.io
+baseurl: /your-blog-backup
+
+markdown: kramdown
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
+collections:
+  posts:
+    output: true
+    permalink: /posts/:title/
+
+theme: minima
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+EOF
+
+# Create layout templates
+mkdir -p docs/_layouts
+
+# Create default layout
+cat > docs/_layouts/default.html <<'EOF'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page.title }} - Your Blog</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.6;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            border-bottom: 2px solid #667eea;
+            margin-bottom: 30px;
+        }
+        header h1 a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .content img {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1><a href="{{ site.baseurl }}/">Your Blog Archive</a></h1>
+        <nav>
+            <a href="{{ site.baseurl }}/">Home</a>
+            <a href="{{ site.baseurl }}/blog-index.html">All Posts</a>
+        </nav>
+    </header>
+    <main>{{ content }}</main>
+</body>
+</html>
+EOF
+
+# Create post layout
+cat > docs/_layouts/post.html <<'EOF'
+---
+layout: default
+---
+<article class="post">
+    <h1>{{ page.title }}</h1>
+    <div class="post-meta">
+        <time>{{ page.date | date: "%B %d, %Y" }}</time>
+        {% if page.author %} • By {{ page.author }}{% endif %}
+    </div>
+    <div class="content">{{ content }}</div>
+</article>
+EOF
+
+# Create homepage
+cat > docs/index.md <<'EOF'
+---
+layout: default
+title: Home
+---
+
+# Your Blog Archive
+
+Welcome to the complete archive of your WordPress blog!
+
+## Recent Posts
+
+<ul>
+{% for post in site.posts limit:10 %}
+  <li>
+    <a href="{{ post.url | relative_url }}">{{ post.title }}</a>
+    <span style="color: #999;">({{ post.date | date: "%Y-%m-%d" }})</span>
+  </li>
+{% endfor %}
+</ul>
+
+[View all posts →](blog-index.html)
+EOF
+```
+
+### Step 4: Set Up GitHub Repository
+
+```bash
+# Initialize Git repository at the root
 git init
 
 # Create a new repository on GitHub, then:
@@ -76,19 +196,21 @@ git remote add origin https://github.com/yourusername/your-blog-backup.git
 
 # Commit and push
 git add .
-git commit -m "Initial WordPress backup"
+git commit -m "Initial WordPress backup with Jekyll"
 git push -u origin main
 ```
 
-### Step 4: Enable GitHub Pages
+### Step 5: Enable GitHub Pages
 
 1. Go to your GitHub repository settings
 2. Navigate to **Pages** section
 3. Select **Source**: Deploy from branch
-4. Select **Branch**: main, folder: / (root)
+4. Select **Branch**: main, **folder**: /docs
 5. Click **Save**
 
 Your blog will be available at: `https://yourusername.github.io/your-blog-backup/`
+
+**Important**: GitHub Pages will automatically build the Jekyll site. All Markdown files in `docs/_posts/` will be converted to HTML and served at clean URLs (e.g., `/posts/my-post-title/` instead of `/posts/my-post-title.md`).
 
 ## Automated Sync
 
@@ -255,24 +377,47 @@ Found 0 published posts/pages
 ### Issue: Special characters in filenames
 **Solution**: The converter automatically sanitizes filenames. If you encounter issues, check the `sanitize_filename()` function.
 
+### Issue: Markdown files return 404 on GitHub Pages
+```
+https://yourusername.github.io/blog/posts/my-post.md returns 404
+```
+**Solution**: GitHub Pages only serves HTML files, not raw Markdown. You need to set up Jekyll:
+1. Follow the Jekyll setup instructions in Step 3 above
+2. Ensure posts are in `docs/_posts/` directory (not `docs/posts/`)
+3. GitHub Pages will automatically build Jekyll and serve posts at clean URLs like `/posts/my-post/` (without .md extension)
+4. Wait a few minutes after pushing for GitHub Pages to rebuild the site
+
 ## File Structure
 
 ```
-wordpress/
+wordpress-backup/
 ├── README.md                  # This file
 ├── wp_to_markdown.py          # Converter script
 ├── sync_wordpress.sh          # Automation script
-└── blog/                      # Generated output (after conversion)
-    ├── README.md              # Blog index/archive
-    ├── images/                # Downloaded images
-    │   ├── a1b2c3d4.jpg
-    │   └── ...
-    ├── posts/                 # Blog posts
+├── blog/                      # Generated output (after conversion)
+│   ├── README.md              # Blog index/archive
+│   ├── images/                # Downloaded images
+│   │   ├── a1b2c3d4.jpg
+│   │   └── ...
+│   ├── posts/                 # Blog posts (before Jekyll setup)
+│   │   ├── 2024-01-15-post-title.md
+│   │   └── ...
+│   └── pages/                 # WordPress pages
+│       ├── about.md
+│       └── ...
+└── docs/                      # Jekyll site for GitHub Pages
+    ├── _config.yml            # Jekyll configuration
+    ├── _layouts/              # Jekyll layout templates
+    │   ├── default.html
+    │   └── post.html
+    ├── _posts/                # Blog posts (Jekyll format)
     │   ├── 2024-01-15-post-title.md
     │   └── ...
-    └── pages/                 # WordPress pages
-        ├── about.md
-        └── ...
+    ├── images/                # Images (copied from blog/)
+    │   ├── a1b2c3d4.jpg
+    │   └── ...
+    ├── index.md               # Homepage
+    └── blog-index.html        # All posts index
 ```
 
 ## Requirements
